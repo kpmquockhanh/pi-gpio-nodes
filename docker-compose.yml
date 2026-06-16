@@ -1,0 +1,71 @@
+services:
+  # Go Backend
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: pi-gpio-backend
+    ports:
+      - "8080:8080"
+    volumes:
+      # Mount source code for hot reload
+      - ./backend:/app
+      # Named volume for Go module cache
+      - go-mod-cache:/go/pkg/mod
+    environment:
+      - CONFIG_PATH=/app/dev-config.toml
+      # - MOCK_GPIO=true
+      - GIN_MODE=debug
+    networks:
+      - pi-gpio-network
+    restart: unless-stopped
+
+  # Agent Node (for testing multi-node setup)
+  agent:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: pi-gpio-agent
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./backend:/app
+      - go-mod-cache:/go/pkg/mod
+    environment:
+      - CONFIG_PATH=/app/agent-config.toml
+      # - MOCK_GPIO=true
+      - GIN_MODE=debug
+    networks:
+      - pi-gpio-network
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  # Vue Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: pi-gpio-frontend
+    ports:
+      - "5173:5173"
+    volumes:
+      # Mount source code for hot reload
+      - ./frontend:/app
+      # Named volume for node_modules (don't overwrite with host)
+      - node-modules-cache:/app/node_modules
+    environment:
+      - NODE_ENV=development
+    depends_on:
+      - backend
+    networks:
+      - pi-gpio-network
+    restart: unless-stopped
+
+networks:
+  pi-gpio-network:
+    driver: bridge
+
+volumes:
+  go-mod-cache:
+  node-modules-cache:

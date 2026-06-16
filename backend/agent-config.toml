@@ -1,0 +1,30 @@
+[node]
+id = "dev-agent"
+name = "Development Agent"
+role = "agent"
+
+[network]
+listen_port = 9090
+master_node = "backend"  # Docker service name resolves to master
+tailscale_ip = "agent"  # Docker service name so master can reach agent
+
+[security]
+api_key = "dev-secret-key"  # Must match master API key
+
+[[pins]]
+id = "agent-fan"
+name = "Agent Case Fan"
+bcm = 22
+type = "relay"
+mode = "output"
+
+[pins.actions]
+toggle = {}
+set = {}
+
+[[pins]]
+id = "agent-temp"
+name = "Agent Temperature"
+bcm = 23
+type = "dht22"
+mode = "input"

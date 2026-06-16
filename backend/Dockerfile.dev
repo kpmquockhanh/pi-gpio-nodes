@@ -1,0 +1,28 @@
+# Backend Development Dockerfile
+# Uses Air for hot reload during development
+
+FROM golang:1.23-alpine
+
+# Install dependencies
+RUN apk add --no-cache git gcc musl-dev sqlite-dev
+
+# Install Air for hot reload
+RUN go install github.com/air-verse/air@v1.52.3
+
+WORKDIR /app
+
+# Copy go mod files first for better caching
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy Air config
+COPY .air.toml ./
+
+# Copy the rest of the source code
+COPY . ./
+
+# Expose backend port
+EXPOSE 8080
+
+# Run with Air for hot reload
+CMD ["air", "-c", ".air.toml"]

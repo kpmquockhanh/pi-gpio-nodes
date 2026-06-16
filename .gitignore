@@ -1,0 +1,33 @@
+# Database files
+*.db
+*.db-journal
+
+# Logs
+*.log
+
+# Frontend build artifacts
+frontend/dist/
+frontend/node_modules/
+
+# Backend build artifacts
+backend/static/
+backend/tmp/
+backend/pi-gpio-dashboard
+bin/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+*.swp
+*.swo
+*~
+
+# Playwright MCP logs
+.playwright-mcp/
+
+# Environment
+.env
+.env.local

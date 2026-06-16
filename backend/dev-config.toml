@@ -1,0 +1,50 @@
+[node]
+id = "dev-pi"
+name = "Development Controller"
+role = "master"
+
+[network]
+listen_port = 8080
+master_node = ""
+
+[security]
+api_key = "dev-secret-key"
+
+[[pins]]
+id = "dev-led-1"
+name = "Dev LED 1"
+bcm = 17
+type = "led"
+mode = "output"
+
+[pins.actions]
+set = {}
+blink = { max_times = 10, default_times = 3, interval_ms = 200 }
+
+[[pins]]
+id = "dev-relay-1"
+name = "Dev Relay 1"
+bcm = 18
+type = "relay"
+mode = "output"
+
+[pins.actions]
+toggle = {}
+pulse = { default_ms = 500, max_ms = 5000 }
+set = {}
+
+[[pins]]
+id = "dev-button-1"
+name = "Dev Button 1"
+bcm = 27
+type = "button"
+mode = "input"
+pull = "up"
+debounce_ms = 50
+
+[[pins]]
+id = "dev-sensor-1"
+name = "Dev Temperature"
+bcm = 22
+type = "dht22"
+mode = "input"
