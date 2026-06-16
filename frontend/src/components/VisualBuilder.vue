@@ -1,93 +1,84 @@
 <template>
   <div class="visual-builder">
     <div class="builder-header">
-      <h2 class="text-2xl font-bold mb-2">Visual Rule Builder</h2>
-      <p class="text-gray-600 mb-4">Drag and drop nodes to create automation rules</p>
+      <h2>Visual Rule Builder</h2>
+      <p class="builder-desc">Drag and drop nodes to create automation rules</p>
       
-      <div class="flex gap-2 mb-4">
-        <button
-          @click="saveRule"
-          class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
-        >
+      <div class="header-actions">
+        <a-button type="primary" @click="saveRule">
           <SaveIcon :size="18" />
           Save Rule
-        </button>
-        <button
-          @click="clearCanvas"
-          class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors flex items-center gap-2"
-        >
+        </a-button>
+        <a-button @click="clearCanvas">
           <TrashIcon :size="18" />
           Clear
-        </button>
-        <button
-          @click="loadRule"
-          class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors flex items-center gap-2"
-        >
+        </a-button>
+        <a-button @click="loadRule">
           <FolderOpenIcon :size="18" />
           Load Rule
-        </button>
+        </a-button>
       </div>
     </div>
 
     <div class="builder-container">
       <!-- Sidebar with node types -->
-      <div class="sidebar bg-gray-50 border-r border-gray-200 p-4 w-64">
-        <h3 class="font-semibold mb-4 text-gray-700">Node Types</h3>
+      <div class="sidebar">
+        <h3>Node Types</h3>
         
-        <div class="space-y-3">
-          <div class="text-sm font-medium text-gray-500 uppercase">Triggers</div>
+        <div class="node-group">
+          <div class="node-group-title">Triggers</div>
           <div
             v-for="type in triggerTypes"
             :key="type.type"
-            class="node-template p-3 bg-white rounded-lg border border-gray-200 cursor-move hover:shadow-md transition-shadow"
+            class="node-template"
             draggable="true"
             @dragstart="onDragStart($event, type)"
           >
-            <div class="flex items-center gap-2">
-              <component :is="type.icon" :size="20" class="text-blue-500" />
+            <div class="node-template-header">
+              <component :is="type.icon" :size="20" class="node-icon-blue" />
               <span class="font-medium">{{ type.label }}</span>
             </div>
-            <div class="text-xs text-gray-500 mt-1">{{ type.description }}</div>
+            <div class="node-template-desc">{{ type.description }}</div>
           </div>
         </div>
 
-        <div class="space-y-3 mt-6">
-          <div class="text-sm font-medium text-gray-500 uppercase">Actions</div>
+        <div class="node-group">
+          <div class="node-group-title">Actions</div>
           <div
             v-for="type in actionTypes"
             :key="type.type"
-            class="node-template p-3 bg-white rounded-lg border border-gray-200 cursor-move hover:shadow-md transition-shadow"
+            class="node-template"
             draggable="true"
             @dragstart="onDragStart($event, type)"
           >
-            <div class="flex items-center gap-2">
-              <component :is="type.icon" :size="20" class="text-green-500" />
+            <div class="node-template-header">
+              <component :is="type.icon" :size="20" class="node-icon-green" />
               <span class="font-medium">{{ type.label }}</span>
             </div>
-            <div class="text-xs text-gray-500 mt-1">{{ type.description }}</div>
+            <div class="node-template-desc">{{ type.description }}</div>
           </div>
         </div>
 
-        <div class="space-y-3 mt-6">
-          <div class="text-sm font-medium text-gray-500 uppercase">Logic</div>
+        <div class="node-group">
+          <div class="node-group-title">Logic</div>
           <div
             v-for="type in logicTypes"
             :key="type.type"
-            class="node-template p-3 bg-white rounded-lg border border-gray-200 cursor-move hover:shadow-md transition-shadow"
+            class="node-template"
             draggable="true"
             @dragstart="onDragStart($event, type)"
           >
-            <div class="flex items-center gap-2">
-              <component :is="type.icon" :size="20" class="text-purple-500" />
+            <div class="node-template-header">
+              <component :is="type.icon" :size="20" class="node-icon-purple" />
               <span class="font-medium">{{ type.label }}</span>
             </div>
-            <div class="text-xs text-gray-500 mt-1">{{ type.description }}</div>
+            <div class="node-template-desc">{{ type.description }}</div>
           </div>
         </div>
       </div>
 
       <!-- Vue Flow Canvas -->
-      <div class="canvas-container flex-1">
+      <div class="canvas-container">
         <VueFlow
           v-model="elements"
           :default-zoom="1"
@@ -127,91 +118,54 @@
     </div>
 
     <!-- Rule Save Modal -->
-    <div v-if="showSaveModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div class="bg-white rounded-xl p-6 w-96 max-w-full mx-4">
-        <h3 class="text-lg font-semibold mb-4">Save Rule</h3>
-        
-        <div class="space-y-4">
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Rule Name</label>
-            <input
-              v-model="ruleName"
-              type="text"
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Enter rule name"
-            />
-          </div>
-          
-          <div class="flex items-center gap-2">
-            <input
-              v-model="ruleEnabled"
-              type="checkbox"
-              id="enabled"
-              class="rounded text-blue-600"
-            />
-            <label for="enabled" class="text-sm">Enable rule</label>
-          </div>
+    <a-modal
+      v-model:open="showSaveModal"
+      title="Save Rule"
+      @ok="confirmSave"
+      @cancel="showSaveModal = false"
+      ok-text="Save"
+    >
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Rule Name</label>
+          <a-input
+            v-model:value="ruleName"
+            placeholder="Enter rule name"
+          />
         </div>
-
-        <div class="flex gap-2 mt-6">
-          <button
-            @click="showSaveModal = false"
-            class="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            @click="confirmSave"
-            class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            Save
-          </button>
+        
+        <div class="flex items-center gap-2">
+          <a-checkbox v-model:checked="ruleEnabled">Enable rule</a-checkbox>
         </div>
       </div>
-    </div>
+    </a-modal>
 
     <!-- Rule Load Modal -->
-    <div v-if="showLoadModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div class="bg-white rounded-xl p-6 w-96 max-w-full mx-4">
-        <h3 class="text-lg font-semibold mb-4">Load Rule</h3>
+    <a-modal
+      v-model:open="showLoadModal"
+      title="Load Rule"
+      @ok="confirmLoad"
+      @cancel="showLoadModal = false"
+      ok-text="Load"
+      :ok-button-props="{ disabled: !selectedRule }"
+    >
+      <div class="space-y-2 max-h-60 overflow-y-auto">
+        <div
+          v-for="rule in existingRules"
+          :key="rule.id"
+          @click="selectRule(rule)"
+          class="rule-item"
+          :class="{ 'rule-selected': selectedRule?.id === rule.id }"
+        >
+          <div class="font-medium">{{ rule.name }}</div>
+          <div class="text-sm text-gray-500">
+            {{ rule.enabled ? 'Enabled' : 'Disabled' }} • {{ rule.actions?.length || 0 }} actions
+          </div>
+        </div>
         
-        <div class="space-y-2 max-h-60 overflow-y-auto">
-          <div
-            v-for="rule in existingRules"
-            :key="rule.id"
-            @click="selectRule(rule)"
-            class="p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
-            :class="{ 'bg-blue-50 border-blue-300': selectedRule?.id === rule.id }"
-          >
-            <div class="font-medium">{{ rule.name }}</div>
-            <div class="text-sm text-gray-500">
-              {{ rule.enabled ? 'Enabled' : 'Disabled' }} • {{ rule.actions?.length || 0 }} actions
-            </div>
-          </div>
-          
-          <div v-if="existingRules.length === 0" class="text-center text-gray-500 py-4">
-            No rules found
-          </div>
-        </div>
-
-        <div class="flex gap-2 mt-6">
-          <button
-            @click="showLoadModal = false"
-            class="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            @click="confirmLoad"
-            class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            :disabled="!selectedRule"
-            :class="{ 'opacity-50 cursor-not-allowed': !selectedRule }"
-          >
-            Load
-          </button>
-        </div>
+        <a-empty v-if="existingRules.length === 0" description="No rules found" />
       </div>
-    </div>
+    </a-modal>
   </div>
 </template>
 
@@ -249,7 +203,6 @@ import EndNode from './nodes/EndNode.vue'
 
 import { api } from '../services/api'
 
-// Node type definitions
 const triggerTypes = [
   { type: 'trigger', subtype: 'pin_state', label: 'Pin State', description: 'Trigger on pin state change', icon: Zap },
   { type: 'trigger', subtype: 'value_threshold', label: 'Threshold', description: 'Trigger on value crossing', icon: Gauge },
@@ -268,7 +221,6 @@ const logicTypes = [
   { type: 'end', label: 'End', description: 'End of flow', icon: ArrowRight },
 ]
 
-// State
 const elements = ref([])
 const showSaveModal = ref(false)
 const showLoadModal = ref(false)
@@ -277,7 +229,6 @@ const ruleEnabled = ref(true)
 const existingRules = ref([])
 const selectedRule = ref(null)
 
-// Drag and drop
 function onDragStart(event, nodeType) {
   event.dataTransfer.setData('application/vueflow', JSON.stringify(nodeType))
   event.dataTransfer.effectAllowed = 'move'
@@ -320,14 +271,12 @@ function onConnect(connection) {
   elements.value.push(edge)
 }
 
-// Canvas operations
 function clearCanvas() {
   if (confirm('Clear all nodes?')) {
     elements.value = []
   }
 }
 
-// Save rule
 function saveRule() {
   showSaveModal.value = true
   ruleName.value = ''
@@ -343,7 +292,6 @@ async function confirmSave() {
   const nodes = elements.value.filter(e => !e.source)
   const edges = elements.value.filter(e => e.source)
 
-  // Validate: must have at least one trigger and one action
   const triggers = nodes.filter(n => n.type === 'trigger')
   const actions = nodes.filter(n => n.type === 'action')
 
@@ -357,7 +305,6 @@ async function confirmSave() {
     return
   }
 
-  // Build rule from flow
   const rule = {
     name: ruleName.value,
     enabled: ruleEnabled.value,
@@ -397,7 +344,6 @@ function buildActionFromNode(node) {
   }
 }
 
-// Load rule
 async function loadRule() {
   try {
     const response = await api.get('/automations')
@@ -420,7 +366,6 @@ function confirmLoad() {
   const rule = selectedRule.value
   elements.value = []
 
-  // Create trigger node
   const triggerNode = {
     id: 'trigger-0',
     type: 'trigger',
@@ -433,7 +378,6 @@ function confirmLoad() {
   }
   elements.value.push(triggerNode)
 
-  // Create action nodes
   let prevNode = triggerNode
   rule.actions.forEach((action, index) => {
     const actionNode = {
@@ -448,7 +392,6 @@ function confirmLoad() {
     }
     elements.value.push(actionNode)
 
-    // Connect nodes
     elements.value.push({
       id: `e${prevNode.id}-${actionNode.id}`,
       source: prevNode.id,
@@ -459,7 +402,6 @@ function confirmLoad() {
     prevNode = actionNode
   })
 
-  // Add end node
   const endNode = {
     id: 'end',
     type: 'end',
@@ -479,7 +421,6 @@ function confirmLoad() {
 }
 
 onMounted(() => {
-  // Add initial nodes
   elements.value = [
     {
       id: 'trigger-0',
@@ -508,11 +449,30 @@ onMounted(() => {
   height: 100vh;
   display: flex;
   flex-direction: column;
+  background: var(--light-bg);
 }
 
 .builder-header {
   padding: 1rem 2rem;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--light-border);
+  background: var(--light-surface);
+}
+
+.builder-header h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--light-text);
+  margin-bottom: 4px;
+}
+
+.builder-desc {
+  color: var(--light-text-muted);
+  margin-bottom: 16px;
+}
+
+.header-actions {
+  display: flex;
+  gap: 8px;
 }
 
 .builder-container {
@@ -523,21 +483,125 @@ onMounted(() => {
 
 .sidebar {
   overflow-y: auto;
+  background: var(--light-surface);
+  border-right: 1px solid var(--light-border);
+  padding: 16px;
+  width: 256px;
 }
 
-.canvas-container {
-  position: relative;
+.sidebar h3 {
+  font-weight: 600;
+  margin-bottom: 16px;
+  color: var(--light-text);
+}
+
+.node-group {
+  margin-bottom: 24px;
+}
+
+.node-group-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--light-text-muted);
+  text-transform: uppercase;
+  margin-bottom: 8px;
 }
 
 .node-template {
+  padding: 12px;
+  background: var(--light-bg);
+  border: 1px solid var(--light-border);
+  border-radius: var(--radius-md);
+  cursor: move;
+  margin-bottom: 8px;
   transition: all 0.2s;
 }
 
 .node-template:hover {
+  border-color: var(--primary-color);
   transform: translateX(4px);
+}
+
+.node-template-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.node-template-desc {
+  font-size: 12px;
+  color: var(--light-text-muted);
+  margin-top: 4px;
+}
+
+.node-icon-blue { color: var(--primary-color); }
+.node-icon-green { color: var(--success-color); }
+.node-icon-purple { color: var(--secondary-color); }
+
+.canvas-container {
+  position: relative;
+  flex: 1;
+}
+
+.rule-item {
+  padding: 12px;
+  border: 1px solid var(--light-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-bottom: 8px;
+}
+
+.rule-item:hover {
+  background: var(--light-bg);
+}
+
+.rule-selected {
+  background: rgba(13, 148, 136, 0.08);
+  border-color: var(--primary-color);
 }
 
 :deep(.vue-flow) {
   height: 100%;
+}
+
+.space-y-4 > * + * {
+  margin-top: 16px;
+}
+
+.space-y-2 > * + * {
+  margin-top: 8px;
+}
+
+.block {
+  display: block;
+}
+
+.font-medium {
+  font-weight: 500;
+}
+
+.text-sm {
+  font-size: 14px;
+}
+
+.text-gray-500 {
+  color: var(--light-text-muted);
+}
+
+.text-gray-700 {
+  color: var(--light-text);
+}
+
+.mb-1 {
+  margin-bottom: 4px;
+}
+
+.max-h-60 {
+  max-height: 240px;
+}
+
+.overflow-y-auto {
+  overflow-y: auto;
 }
 </style>

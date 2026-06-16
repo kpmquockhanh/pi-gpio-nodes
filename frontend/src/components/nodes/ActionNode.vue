@@ -8,35 +8,35 @@
     <div class="node-body">
       <div class="text-xs text-gray-500 mb-2">{{ data.subtype || 'pin_action' }}</div>
       <div class="space-y-2">
-        <select v-model="config.node" class="w-full text-xs p-1 border rounded">
-          <option value="">Select node</option>
-          <option value="local">Local</option>
-        </select>
-        <select v-model="config.pin" class="w-full text-xs p-1 border rounded">
-          <option value="">Select pin</option>
-          <option value="pc-power">PC Power</option>
-          <option value="status-led">Status LED</option>
-          <option value="power-button">Power Button</option>
-        </select>
-        <select v-model="config.action" class="w-full text-xs p-1 border rounded">
-          <option value="toggle">Toggle</option>
-          <option value="pulse">Pulse</option>
-          <option value="set">Set</option>
-          <option value="blink">Blink</option>
-        </select>
+        <a-select v-model:value="config.node" size="small" class="w-full">
+          <a-select-option value="">Select node</a-select-option>
+          <a-select-option value="local">Local</a-select-option>
+        </a-select>
+        <a-select v-model:value="config.pin" size="small" class="w-full">
+          <a-select-option value="">Select pin</a-select-option>
+          <a-select-option value="pc-power">PC Power</a-select-option>
+          <a-select-option value="status-led">Status LED</a-select-option>
+          <a-select-option value="power-button">Power Button</a-select-option>
+        </a-select>
+        <a-select v-model:value="config.action" size="small" class="w-full">
+          <a-select-option value="toggle">Toggle</a-select-option>
+          <a-select-option value="pulse">Pulse</a-select-option>
+          <a-select-option value="set">Set</a-select-option>
+          <a-select-option value="blink">Blink</a-select-option>
+        </a-select>
         <div v-if="config.action === 'pulse' || config.action === 'blink'">
-          <input 
-            v-model="config.params.ms" 
-            type="number" 
+          <a-input-number
+            v-model:value="config.params.ms"
             placeholder="Duration (ms)"
-            class="w-full text-xs p-1 border rounded"
+            size="small"
+            class="w-full"
           />
         </div>
         <div v-if="config.action === 'set'">
-          <select v-model="config.params.value" class="w-full text-xs p-1 border rounded">
-            <option :value="true">HIGH</option>
-            <option :value="false">LOW</option>
-          </select>
+          <a-select v-model:value="config.params.value" size="small" class="w-full">
+            <a-select-option :value="true">HIGH</a-select-option>
+            <a-select-option :value="false">LOW</a-select-option>
+          </a-select>
         </div>
       </div>
     </div>
@@ -62,18 +62,65 @@ watch(config, (newConfig) => {
 
 <style scoped>
 .action-node {
-  @apply bg-white border-2 border-green-400 rounded-xl p-3 min-w-[180px];
+  background: var(--light-surface);
+  border: 2px solid var(--success-color);
+  border-radius: var(--radius-lg);
+  padding: 12px;
+  min-width: 180px;
 }
 
 .node-header {
-  @apply flex items-center gap-2 mb-2 pb-2 border-b border-green-100;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(16, 185, 129, 0.2);
 }
 
 .node-body {
-  @apply space-y-2;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .handle {
-  @apply w-3 h-3 bg-green-500 border-2 border-white rounded-full;
+  width: 12px;
+  height: 12px;
+  background: var(--success-color);
+  border: 2px solid var(--light-surface);
+  border-radius: 50%;
+}
+
+.text-green-500 {
+  color: var(--success-color);
+}
+
+.font-medium {
+  font-weight: 500;
+}
+
+.text-sm {
+  font-size: 14px;
+}
+
+.text-xs {
+  font-size: 12px;
+}
+
+.text-gray-500 {
+  color: var(--light-text-muted);
+}
+
+.mb-2 {
+  margin-bottom: 8px;
+}
+
+.space-y-2 > * + * {
+  margin-top: 8px;
+}
+
+.w-full {
+  width: 100%;
 }
 </style>

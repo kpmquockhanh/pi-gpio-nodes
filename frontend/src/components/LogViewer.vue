@@ -1,25 +1,27 @@
 <template>
-  <div class="log-viewer">
-    <div class="log-header">
-      <h3>
-        <ActivitySquare :size="18" />
-        Action Logs
-      </h3>
-      <div class="log-controls">
-        <button 
-          class="btn btn-sm" 
-          :class="logsStore.autoRefresh ? 'btn-active' : 'btn-inactive'"
-          @click="logsStore.autoRefresh = !logsStore.autoRefresh"
-        >
-          <component :is="logsStore.autoRefresh ? PlayCircle : PauseCircle" :size="14" />
-          {{ logsStore.autoRefresh ? 'Auto' : 'Manual' }}
-        </button>
-        <button class="btn btn-sm btn-primary" @click="refreshLogs">
-          <RotateCw :size="14" />
-          Refresh
-        </button>
+  <a-card class="log-viewer" :bordered="true">
+    <template #title>
+      <div class="log-header">
+        <h3>
+          <ActivitySquare :size="18" />
+          Action Logs
+        </h3>
+        <div class="log-controls">
+          <a-button
+            size="small"
+            :type="logsStore.autoRefresh ? 'primary' : 'default'"
+            @click="logsStore.autoRefresh = !logsStore.autoRefresh"
+          >
+            <component :is="logsStore.autoRefresh ? PlayCircle : PauseCircle" :size="14" />
+            {{ logsStore.autoRefresh ? 'Auto' : 'Manual' }}
+          </a-button>
+          <a-button type="primary" size="small" @click="refreshLogs">
+            <RotateCw :size="14" />
+            Refresh
+          </a-button>
+        </div>
       </div>
-    </div>
+    </template>
 
     <div class="log-list" v-if="logsStore.logs.length > 0">
       <div 
@@ -41,10 +43,10 @@
             <Pin :size="10" />
             {{ log.PinID || 'system' }}
           </span>
-          <span class="log-action">
+          <a-tag size="small" class="log-action">
             <Zap :size="10" />
             {{ log.Action }}
-          </span>
+          </a-tag>
           <span class="log-trigger">
             <User :size="10" />
             {{ log.TriggeredBy }}
@@ -56,77 +58,74 @@
         </div>
       </div>
     </div>
-    <div v-else class="log-empty">
-      <Inbox :size="32" />
-      <p>No actions recorded yet</p>
-    </div>
-  </div>
+    <a-empty v-else description="No actions recorded yet" class="log-empty">
+      <template #image>
+        <Inbox :size="32" />
+      </template>
+    </a-empty>
+  </a-card>
 </template>
 
-<script>
+<script setup>
+import { onMounted, onBeforeUnmount } from 'vue'
 import { useLogsStore } from '../store/logs.js'
-import { 
-  ActivitySquare, RotateCw, PlayCircle, PauseCircle, 
+import {
+  ActivitySquare, RotateCw, PlayCircle, PauseCircle,
   Clock, Cpu, Pin, Zap, User, CheckCircle2, AlertCircle, Inbox
 } from '@lucide/vue'
 
-export default {
-  name: 'LogViewer',
-  components: {
-    ActivitySquare, RotateCw, PlayCircle, PauseCircle, 
-    Clock, Cpu, Pin, Zap, User, CheckCircle2, AlertCircle, Inbox
-  },
-  setup() {
-    const logsStore = useLogsStore()
-    return { logsStore }
-  },
-  mounted() {
-    this.logsStore.fetchLogs(50)
-    this.logsStore.startAutoRefresh()
-  },
-  beforeUnmount() {
-    this.logsStore.stopAutoRefresh()
-  },
-  methods: {
-    refreshLogs() {
-      this.logsStore.fetchLogs(50)
-    },
-    formatTime(timestamp) {
-      if (!timestamp) return '-'
-      const date = new Date(timestamp * 1000)
-      return date.toLocaleTimeString()
-    },
-  },
+const logsStore = useLogsStore()
+
+onMounted(() => {
+  logsStore.fetchLogs(50)
+  logsStore.startAutoRefresh()
+})
+
+onBeforeUnmount(() => {
+  logsStore.stopAutoRefresh()
+})
+
+function refreshLogs() {
+  logsStore.fetchLogs(50)
+}
+
+function formatTime(timestamp) {
+  if (!timestamp) return '-'
+  const date = new Date(timestamp * 1000)
+  return date.toLocaleTimeString()
 }
 </script>
 
 <style scoped>
 .log-viewer {
-  background: #1e293b;
-  border: 1px solid #334155;
-  border-radius: 12px;
-  padding: 16px;
+  background: var(--light-surface);
+  border-color: var(--light-border);
   max-height: 400px;
   display: flex;
   flex-direction: column;
+}
+
+.log-viewer :deep(.ant-card-body) {
+  padding: 12px;
+  overflow-y: auto;
+  flex: 1;
 }
 
 .log-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 12px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid #334155;
+  width: 100%;
 }
 
 .log-header h3 {
   font-size: 16px;
   font-weight: 600;
-  color: #f1f5f9;
+  color: var(--light-text);
   display: flex;
   align-items: center;
   gap: 8px;
+  margin: 0;
 }
 
 .log-controls {
@@ -134,41 +133,7 @@ export default {
   gap: 8px;
 }
 
-.btn-sm {
-  padding: 4px 10px;
-  font-size: 12px;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  font-weight: 500;
-}
-
-.btn-active {
-  background: rgba(34, 197, 94, 0.2);
-  color: #4ade80;
-}
-
-.btn-inactive {
-  background: rgba(100, 116, 139, 0.2);
-  color: #94a3b8;
-}
-
-.btn-primary {
-  background: #3b82f6;
-  color: white;
-}
-
-.btn-primary:hover {
-  background: #2563eb;
-}
-
 .log-list {
-  overflow-y: auto;
-  flex: 1;
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -179,14 +144,14 @@ export default {
   grid-template-columns: 70px 1fr auto;
   gap: 8px;
   padding: 8px;
-  background: rgba(15, 23, 42, 0.5);
-  border-radius: 6px;
+  background: var(--light-bg);
+  border-radius: var(--radius-md);
   font-size: 13px;
   align-items: center;
 }
 
 .log-time {
-  color: #64748b;
+  color: var(--light-text-muted);
   font-size: 11px;
   font-family: monospace;
   display: flex;
@@ -208,62 +173,43 @@ export default {
 }
 
 .log-node {
-  color: #60a5fa;
+  color: var(--secondary-color);
   font-weight: 500;
 }
 
 .log-pin {
-  color: #a78bfa;
+  color: #8b5cf6;
 }
 
 .log-action {
-  background: rgba(59, 130, 246, 0.2);
-  color: #60a5fa;
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-size: 11px;
+  background: rgba(13, 148, 136, 0.15);
+  color: var(--primary-color);
+  border: none;
   text-transform: uppercase;
+  font-size: 11px;
 }
 
 .log-trigger {
-  color: #64748b;
+  color: var(--light-text-muted);
   font-size: 11px;
 }
 
 .log-result {
   font-size: 11px;
-  color: #94a3b8;
+  color: var(--light-text-muted);
   display: flex;
   align-items: center;
   gap: 3px;
 }
 
 .log-result.success {
-  color: #4ade80;
+  color: var(--success-color);
 }
 
 .log-empty {
   text-align: center;
   padding: 20px;
-  color: #64748b;
+  color: var(--light-text-muted);
   font-size: 14px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-}
-
-/* Scrollbar styling */
-.log-list::-webkit-scrollbar {
-  width: 6px;
-}
-
-.log-list::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.log-list::-webkit-scrollbar-thumb {
-  background: #475569;
-  border-radius: 3px;
 }
 </style>

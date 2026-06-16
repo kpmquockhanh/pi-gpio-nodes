@@ -5,30 +5,37 @@
         <Workflow :size="24" />
         Automation Rules
       </h2>
-      <div class="flex gap-2">
-        <button class="btn btn-primary" @click="showEditor = true">
+      <div class="flex items-center gap-2">
+        <a-button type="primary" @click="showEditor = true">
           <Plus :size="16" />
           New Rule
-        </button>
-        <button class="btn btn-secondary" @click="showVisualBuilder = true">
+        </a-button>
+        <a-button @click="showVisualBuilder = true">
           <GitGraph :size="16" />
           Visual Builder
-        </button>
+        </a-button>
       </div>
     </div>
 
-    <div v-if="automations.length === 0" class="empty-state">
-      <Inbox :size="48" />
-      <p>No automation rules yet</p>
-      <p class="hint">Create rules to automate your GPIO pins</p>
-    </div>
+    <a-empty v-if="automations.length === 0" description="No automation rules yet">
+      <template #image>
+        <Inbox :size="48" />
+      </template>
+      <template #description>
+        <div class="empty-desc">
+          <p>No automation rules yet</p>
+          <p class="hint">Create rules to automate your GPIO pins</p>
+        </div>
+      </template>
+    </a-empty>
 
     <div v-else class="automation-cards">
-      <div 
-        v-for="auto in automations" 
+      <a-card
+        v-for="auto in automations"
         :key="auto.id"
         class="automation-card"
         :class="{ disabled: !auto.enabled }"
+        :bordered="true"
       >
         <div class="automation-header-row">
           <h3>
@@ -36,18 +43,18 @@
             {{ auto.name }}
           </h3>
           <div class="automation-controls">
-            <button 
-              class="btn btn-sm"
-              :class="auto.enabled ? 'btn-success' : 'btn-secondary'"
+            <a-button
+              size="small"
+              :type="auto.enabled ? 'primary' : 'default'"
               @click="toggleEnabled(auto)"
             >
               <component :is="auto.enabled ? ToggleRight : ToggleLeft" :size="14" />
               {{ auto.enabled ? 'ON' : 'OFF' }}
-            </button>
-            <button class="btn btn-sm btn-danger" @click="deleteRule(auto.id)">
+            </a-button>
+            <a-button size="small" danger @click="deleteRule(auto.id)">
               <Trash2 :size="14" />
               Delete
-            </button>
+            </a-button>
           </div>
         </div>
 
@@ -77,8 +84,8 @@
 
           <!-- Actions -->
           <div class="flow-actions">
-            <div 
-              v-for="(action, idx) in auto.actions" 
+            <div
+              v-for="(action, idx) in auto.actions"
               :key="idx"
               class="flow-node action"
             >
@@ -96,11 +103,11 @@
             </div>
           </div>
         </div>
-      </div>
+      </a-card>
     </div>
 
     <!-- Editor Modal -->
-    <AutomationEditor 
+    <AutomationEditor
       v-if="showEditor"
       :pins="allPins"
       @save="saveAutomation"
@@ -108,96 +115,86 @@
     />
 
     <!-- Visual Builder Modal -->
-    <div v-if="showVisualBuilder" class="fixed inset-0 bg-black/50 z-50 flex flex-col">
-      <div class="flex-1 bg-white m-4 rounded-xl overflow-hidden">
-        <VisualBuilder @close="showVisualBuilder = false" />
-      </div>
-    </div>
+    <a-modal
+      v-model:open="showVisualBuilder"
+      :footer="null"
+      width="90%"
+      wrap-class-name="visual-builder-modal"
+      @cancel="showVisualBuilder = false"
+    >
+      <VisualBuilder @close="showVisualBuilder = false" />
+    </a-modal>
   </div>
 </template>
 
-<script>
-import { ref, computed } from 'vue'
+<script setup>
+import { ref, computed, onMounted } from 'vue'
 import { useNodesStore } from '../../store/nodes.js'
-import { 
-  Workflow, Plus, Inbox, Settings, ToggleRight, ToggleLeft, 
+import {
+  Workflow, Plus, Inbox, Settings, ToggleRight, ToggleLeft,
   Trash2, Activity, Pin, CheckCircle2, ArrowRight, Zap, GitGraph
 } from '@lucide/vue'
 import AutomationEditor from './AutomationEditor.vue'
 import VisualBuilder from '../VisualBuilder.vue'
 
-export default {
-  name: 'AutomationList',
-  components: { 
-    AutomationEditor, VisualBuilder,
-    Workflow, Plus, Inbox, Settings, ToggleRight, ToggleLeft, 
-    Trash2, Activity, Pin, CheckCircle2, ArrowRight, Zap, GitGraph
-  },
-  setup() {
-    const nodesStore = useNodesStore()
-    const showEditor = ref(false)
-    const showVisualBuilder = ref(false)
-    const automations = ref([])
+const nodesStore = useNodesStore()
+const showEditor = ref(false)
+const showVisualBuilder = ref(false)
+const automations = ref([])
 
-    const allPins = computed(() => nodesStore.allPins)
+const allPins = computed(() => nodesStore.allPins)
 
-    return {
-      showEditor,
-      showVisualBuilder,
-      automations,
-      allPins,
+onMounted(async () => {
+  await loadAutomations()
+})
+
+async function loadAutomations() {
+  try {
+    const response = await fetch('/api/automations')
+    const data = await response.json()
+    automations.value = data.automations || []
+  } catch (err) {
+    console.error('Failed to load automations:', err)
+  }
+}
+
+async function toggleEnabled(auto) {
+  try {
+    await fetch(`/api/automations/${auto.id}/enable`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ enabled: !auto.enabled }),
+    })
+    auto.enabled = !auto.enabled
+  } catch (err) {
+    console.error('Failed to toggle automation:', err)
+  }
+}
+
+async function deleteRule(id) {
+  if (!confirm('Delete this automation rule?')) return
+  try {
+    await fetch(`/api/automations/${id}`, { method: 'DELETE' })
+    automations.value = automations.value.filter(a => a.id !== id)
+  } catch (err) {
+    console.error('Failed to delete automation:', err)
+  }
+}
+
+async function saveAutomation(rule) {
+  try {
+    const response = await fetch('/api/automations', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(rule),
+    })
+    if (response.ok) {
+      showEditor.value = false
+      await loadAutomations()
     }
-  },
-  async mounted() {
-    await this.loadAutomations()
-  },
-  methods: {
-    async loadAutomations() {
-      try {
-        const response = await fetch('/api/automations')
-        const data = await response.json()
-        this.automations = data.automations || []
-      } catch (err) {
-        console.error('Failed to load automations:', err)
-      }
-    },
-    async toggleEnabled(auto) {
-      try {
-        await fetch(`/api/automations/${auto.id}/enable`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ enabled: !auto.enabled }),
-        })
-        auto.enabled = !auto.enabled
-      } catch (err) {
-        console.error('Failed to toggle automation:', err)
-      }
-    },
-    async deleteRule(id) {
-      if (!confirm('Delete this automation rule?')) return
-      try {
-        await fetch(`/api/automations/${id}`, { method: 'DELETE' })
-        this.automations = this.automations.filter(a => a.id !== id)
-      } catch (err) {
-        console.error('Failed to delete automation:', err)
-      }
-    },
-    async saveAutomation(rule) {
-      try {
-        const response = await fetch('/api/automations', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(rule),
-        })
-        if (response.ok) {
-          this.showEditor = false
-          await this.loadAutomations()
-        }
-      } catch (err) {
-        console.error('Failed to save automation:', err)
-      }
-    },
-  },
+  } catch (err) {
+    console.error('Failed to save automation:', err)
+  }
 }
 </script>
 
@@ -215,23 +212,19 @@ export default {
 
 .automation-header h2 {
   font-size: 20px;
-  color: #f1f5f9;
+  color: var(--light-text);
   display: flex;
   align-items: center;
   gap: 10px;
+  margin: 0;
 }
 
-.empty-state {
+.empty-desc {
   text-align: center;
-  padding: 60px 20px;
-  color: #64748b;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
+  color: var(--light-text-muted);
 }
 
-.empty-state .hint {
+.empty-desc .hint {
   font-size: 14px;
   margin-top: 8px;
 }
@@ -243,15 +236,17 @@ export default {
 }
 
 .automation-card {
-  background: linear-gradient(145deg, #1e293b, #0f172a);
-  border: 1px solid #334155;
-  border-radius: 12px;
-  padding: 20px;
+  background: var(--light-surface);
+  border-color: var(--light-border);
   transition: all 0.3s ease;
 }
 
 .automation-card.disabled {
   opacity: 0.6;
+}
+
+.automation-card :deep(.ant-card-body) {
+  padding: 20px;
 }
 
 .automation-header-row {
@@ -263,54 +258,16 @@ export default {
 
 .automation-header-row h3 {
   font-size: 16px;
-  color: #f1f5f9;
+  color: var(--light-text);
   display: flex;
   align-items: center;
   gap: 8px;
+  margin: 0;
 }
 
 .automation-controls {
   display: flex;
   gap: 8px;
-}
-
-.btn {
-  padding: 7px 14px;
-  border: none;
-  border-radius: 8px;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  color: white;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.btn-primary {
-  background: #3b82f6;
-}
-
-.btn-primary:hover {
-  background: #2563eb;
-}
-
-.btn-success {
-  background: #22c55e;
-}
-
-.btn-secondary {
-  background: #64748b;
-}
-
-.btn-danger {
-  background: #ef4444;
-}
-
-.btn-sm {
-  padding: 4px 10px;
-  font-size: 12px;
 }
 
 .automation-flow {
@@ -321,21 +278,21 @@ export default {
 }
 
 .flow-node {
-  background: rgba(59, 130, 246, 0.15);
-  border: 1px solid rgba(59, 130, 246, 0.3);
-  border-radius: 8px;
+  background: rgba(13, 148, 136, 0.1);
+  border: 1px solid rgba(13, 148, 136, 0.25);
+  border-radius: var(--radius-md);
   padding: 10px 14px;
   min-width: 140px;
 }
 
 .flow-node.trigger {
-  background: rgba(34, 197, 94, 0.15);
-  border-color: rgba(34, 197, 94, 0.3);
+  background: rgba(16, 185, 129, 0.1);
+  border-color: rgba(16, 185, 129, 0.25);
 }
 
 .flow-node.action {
-  background: rgba(59, 130, 246, 0.15);
-  border-color: rgba(59, 130, 246, 0.3);
+  background: rgba(13, 148, 136, 0.1);
+  border-color: rgba(13, 148, 136, 0.25);
 }
 
 .node-label {
@@ -343,7 +300,7 @@ export default {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 1px;
-  color: #94a3b8;
+  color: var(--light-text-muted);
   margin-bottom: 4px;
   display: flex;
   align-items: center;
@@ -364,22 +321,22 @@ export default {
 
 .trigger-type, .action-type {
   font-weight: 600;
-  color: #f1f5f9;
+  color: var(--light-text);
   font-size: 13px;
 }
 
 .trigger-pin, .action-pin {
   font-size: 12px;
-  color: #60a5fa;
+  color: var(--secondary-color);
 }
 
 .trigger-condition {
   font-size: 11px;
-  color: #4ade80;
+  color: var(--success-color);
 }
 
 .flow-arrow {
-  color: #64748b;
+  color: var(--light-text-muted);
   display: flex;
   align-items: center;
 }
@@ -388,5 +345,14 @@ export default {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+:deep(.visual-builder-modal .ant-modal-body) {
+  padding: 0;
+  height: 80vh;
+}
+
+:deep(.visual-builder-modal .ant-modal-content) {
+  background: var(--light-bg);
 }
 </style>

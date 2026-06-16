@@ -191,6 +191,18 @@ master_node = "master-pi"
 tailscale_ip = "100.x.x.x"  # Optional, for reference
 ```
 
+## UI Theme
+
+The dashboard uses **light mode** by default with a custom teal/indigo color palette powered by Ant Design Vue.
+
+- **Primary**: Teal (`#0d9488`)
+- **Secondary**: Indigo (`#6366f1`)
+- **Background**: Light gray (`#f8fafc`)
+- **Cards**: White (`#ffffff`)
+- **Text**: Slate dark (`#0f172a`)
+
+Dark mode is not currently enabled. The UI components are built using Ant Design Vue v4 with auto-importing via `unplugin-vue-components`.
+
 ## Troubleshooting
 
 ### "Permission denied" on GPIO

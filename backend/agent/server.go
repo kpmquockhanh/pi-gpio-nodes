@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -19,6 +20,7 @@ type AgentServer struct {
 	cfg       *config.Config
 	manager   *node.Manager
 	masterWS  *websocket.Conn
+	wsMutex   sync.Mutex
 	router    *gin.Engine
 	port      int
 	apiKey    string
@@ -124,12 +126,17 @@ func (a *AgentServer) handleMasterCommand(cmd MasterCommand) interface{} {
 	return nil
 }
 
-// Broadcast state change to master
-func (a *AgentServer) broadcastState() {
-	if a.masterWS == nil {
+func (a *AgentServer) writeMessage(conn *websocket.Conn, data []byte) {
+	if conn == nil {
 		return
 	}
+	a.wsMutex.Lock()
+	defer a.wsMutex.Unlock()
+	conn.WriteMessage(websocket.TextMessage, data)
+}
 
+// Broadcast state change to master
+func (a *AgentServer) broadcastState() {
 	state := a.manager.GetNodeState()
 	data, _ := json.Marshal(map[string]interface{}{
 		"type":  "state_full",
@@ -137,15 +144,11 @@ func (a *AgentServer) broadcastState() {
 		"state": state,
 	})
 
-	a.masterWS.WriteMessage(websocket.TextMessage, data)
+	a.writeMessage(a.masterWS, data)
 }
 
 // BroadcastPinUpdate sends a single pin update to master
 func (a *AgentServer) BroadcastPinUpdate(pinID string, state interface{}) {
-	if a.masterWS == nil {
-		return
-	}
-
 	data, _ := json.Marshal(map[string]interface{}{
 		"type":  "state_update",
 		"node":  a.cfg.Node.ID,
@@ -153,7 +156,7 @@ func (a *AgentServer) BroadcastPinUpdate(pinID string, state interface{}) {
 		"state": state,
 	})
 
-	a.masterWS.WriteMessage(websocket.TextMessage, data)
+	a.writeMessage(a.masterWS, data)
 }
 
 // HTTP Handlers
@@ -226,14 +229,16 @@ func (a *AgentServer) handleWebSocket(c *gin.Context) {
 	// Handle master WebSocket connection
 	log.Println("Master connected to agent WebSocket")
 
+	var connMutex sync.Mutex
+
 	// Send initial state
-	a.sendStateToMaster(conn)
+	a.sendStateToMaster(conn, &connMutex)
 
 	// Setup state change broadcasting via this connection
 	for _, pin := range a.manager.GetAllStates() {
 		pinID := pin.ID
 		a.manager.OnStateChange(pinID, func(id string, state interface{}) {
-			a.sendPinUpdateToMaster(conn, id, state)
+			a.sendPinUpdateToMaster(conn, &connMutex, id, state)
 		})
 	}
 
@@ -250,28 +255,32 @@ func (a *AgentServer) handleWebSocket(c *gin.Context) {
 			if result != nil {
 				// Send state update after command
 				state, _ := a.manager.GetState(cmd.PinID)
-				a.sendPinUpdateToMaster(conn, cmd.PinID, state.State)
+				a.sendPinUpdateToMaster(conn, &connMutex, cmd.PinID, state.State)
 			}
 		}
 	}
 }
 
-func (a *AgentServer) sendStateToMaster(conn *websocket.Conn) {
+func (a *AgentServer) sendStateToMaster(conn *websocket.Conn, mu *sync.Mutex) {
 	state := a.manager.GetNodeState()
 	data, _ := json.Marshal(map[string]interface{}{
 		"type":  "state_full",
 		"node":  a.cfg.Node.ID,
 		"state": state,
 	})
+	mu.Lock()
+	defer mu.Unlock()
 	conn.WriteMessage(websocket.TextMessage, data)
 }
 
-func (a *AgentServer) sendPinUpdateToMaster(conn *websocket.Conn, pinID string, state interface{}) {
+func (a *AgentServer) sendPinUpdateToMaster(conn *websocket.Conn, mu *sync.Mutex, pinID string, state interface{}) {
 	data, _ := json.Marshal(map[string]interface{}{
 		"type":  "state_update",
 		"node":  a.cfg.Node.ID,
 		"pin":   pinID,
 		"state": state,
 	})
+	mu.Lock()
+	defer mu.Unlock()
 	conn.WriteMessage(websocket.TextMessage, data)
 }

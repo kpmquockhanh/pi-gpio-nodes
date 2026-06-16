@@ -9,11 +9,38 @@ const api = axios.create({
   },
 })
 
-// Add API key to requests if available
-const API_KEY = localStorage.getItem('api_key') || 'dev-api-key'
-if (API_KEY) {
-  api.defaults.headers.common['X-API-Key'] = API_KEY
+// Load API key from localStorage if available
+function loadApiKey() {
+  const key = localStorage.getItem('api_key')
+  if (key) {
+    api.defaults.headers.common['X-API-Key'] = key
+  }
+  return key
 }
+
+// Set/update API key dynamically
+export function setApiKey(key) {
+  if (key) {
+    localStorage.setItem('api_key', key)
+    api.defaults.headers.common['X-API-Key'] = key
+  } else {
+    localStorage.removeItem('api_key')
+    delete api.defaults.headers.common['X-API-Key']
+  }
+}
+
+// Get current API key
+export function getApiKey() {
+  return localStorage.getItem('api_key') || api.defaults.headers.common['X-API-Key'] || ''
+}
+
+// Check if API key is configured
+export function hasApiKey() {
+  return !!getApiKey()
+}
+
+// Initialize on load
+const API_KEY = loadApiKey()
 
 // WebSocket Manager with automatic reconnect and polling fallback
 class ConnectionManager {
@@ -31,6 +58,10 @@ class ConnectionManager {
     this.shouldReconnect = true
   }
 
+  _getApiKey() {
+    return getApiKey()
+  }
+
   connect(url, options = {}) {
     this.url = url
     this.options = options
@@ -44,9 +75,11 @@ class ConnectionManager {
   _connectWebSocket() {
     if (!this.shouldReconnect) return
     
+    const key = this._getApiKey()
+    
     try {
       console.log('Connecting to WebSocket...')
-      this.ws = new WebSocket(`${this.url}?api_key=${API_KEY}`)
+      this.ws = new WebSocket(`${this.url}?api_key=${key}`)
       
       this.ws.onopen = () => {
         console.log('WebSocket connected')

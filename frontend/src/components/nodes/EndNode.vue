@@ -18,18 +18,47 @@ import { ArrowRight } from '@lucide/vue'
 
 <style scoped>
 .end-node {
-  @apply bg-white border-2 border-gray-400 rounded-xl p-3 min-w-[120px];
+  background: var(--light-surface);
+  border: 2px solid var(--light-border);
+  border-radius: var(--radius-lg);
+  padding: 12px;
+  min-width: 120px;
 }
 
 .node-header {
-  @apply flex items-center gap-2 mb-2 pb-2 border-b border-gray-100;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--light-border);
 }
 
 .node-body {
-  @apply text-center;
+  text-align: center;
 }
 
 .handle {
-  @apply w-3 h-3 bg-gray-500 border-2 border-white rounded-full;
+  width: 12px;
+  height: 12px;
+  background: var(--light-text-muted);
+  border: 2px solid var(--light-surface);
+  border-radius: 50%;
+}
+
+.text-gray-500 {
+  color: var(--light-text-muted);
+}
+
+.font-medium {
+  font-weight: 500;
+}
+
+.text-sm {
+  font-size: 14px;
+}
+
+.text-xs {
+  font-size: 12px;
 }
 </style>

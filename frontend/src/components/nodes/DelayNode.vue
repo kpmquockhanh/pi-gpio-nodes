@@ -7,17 +7,12 @@
     </div>
     <div class="node-body">
       <div class="space-y-2">
-        <input 
-          v-model="config.ms" 
-          type="number" 
-          placeholder="Duration (ms)"
-          class="w-full text-xs p-1 border rounded"
-        />
-        <select v-model="config.unit" class="w-full text-xs p-1 border rounded">
-          <option value="ms">Milliseconds</option>
-          <option value="s">Seconds</option>
-          <option value="m">Minutes</option>
-        </select>
+        <a-input-number v-model:value="config.ms" placeholder="Duration (ms)" size="small" class="w-full" />
+        <a-select v-model:value="config.unit" size="small" class="w-full">
+          <a-select-option value="ms">Milliseconds</a-select-option>
+          <a-select-option value="s">Seconds</a-select-option>
+          <a-select-option value="m">Minutes</a-select-option>
+        </a-select>
       </div>
     </div>
     <Handle type="source" position="bottom" class="handle" />
@@ -42,18 +37,53 @@ watch(config, (newConfig) => {
 
 <style scoped>
 .delay-node {
-  @apply bg-white border-2 border-yellow-400 rounded-xl p-3 min-w-[150px];
+  background: var(--light-surface);
+  border: 2px solid var(--warning-color);
+  border-radius: var(--radius-lg);
+  padding: 12px;
+  min-width: 150px;
 }
 
 .node-header {
-  @apply flex items-center gap-2 mb-2 pb-2 border-b border-yellow-100;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(245, 158, 11, 0.2);
 }
 
 .node-body {
-  @apply space-y-2;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .handle {
-  @apply w-3 h-3 bg-yellow-500 border-2 border-white rounded-full;
+  width: 12px;
+  height: 12px;
+  background: var(--warning-color);
+  border: 2px solid var(--light-surface);
+  border-radius: 50%;
+}
+
+.text-yellow-500 {
+  color: var(--warning-color);
+}
+
+.font-medium {
+  font-weight: 500;
+}
+
+.text-sm {
+  font-size: 14px;
+}
+
+.space-y-2 > * + * {
+  margin-top: 8px;
+}
+
+.w-full {
+  width: 100%;
 }
 </style>

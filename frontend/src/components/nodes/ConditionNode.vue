@@ -7,29 +7,24 @@
     </div>
     <div class="node-body">
       <div class="space-y-2">
-        <select v-model="config.type" class="w-full text-xs p-1 border rounded">
-          <option value="pin_state">Pin State</option>
-          <option value="value">Value</option>
-          <option value="time">Time</option>
-        </select>
-        <select v-model="config.pin" class="w-full text-xs p-1 border rounded">
-          <option value="">Select pin</option>
-          <option value="pc-power">PC Power</option>
-          <option value="status-led">Status LED</option>
-          <option value="power-button">Power Button</option>
-        </select>
-        <select v-model="config.operator" class="w-full text-xs p-1 border rounded">
-          <option value="equals">Equals</option>
-          <option value="not_equals">Not Equals</option>
-          <option value="greater_than">Greater Than</option>
-          <option value="less_than">Less Than</option>
-        </select>
-        <input 
-          v-model="config.value" 
-          type="text" 
-          placeholder="Value"
-          class="w-full text-xs p-1 border rounded"
-        />
+        <a-select v-model:value="config.type" size="small" class="w-full">
+          <a-select-option value="pin_state">Pin State</a-select-option>
+          <a-select-option value="value">Value</a-select-option>
+          <a-select-option value="time">Time</a-select-option>
+        </a-select>
+        <a-select v-model:value="config.pin" size="small" class="w-full">
+          <a-select-option value="">Select pin</a-select-option>
+          <a-select-option value="pc-power">PC Power</a-select-option>
+          <a-select-option value="status-led">Status LED</a-select-option>
+          <a-select-option value="power-button">Power Button</a-select-option>
+        </a-select>
+        <a-select v-model:value="config.operator" size="small" class="w-full">
+          <a-select-option value="equals">Equals</a-select-option>
+          <a-select-option value="not_equals">Not Equals</a-select-option>
+          <a-select-option value="greater_than">Greater Than</a-select-option>
+          <a-select-option value="less_than">Less Than</a-select-option>
+        </a-select>
+        <a-input v-model:value="config.value" placeholder="Value" size="small" class="w-full" />
       </div>
     </div>
     <Handle type="source" position="bottom" class="handle" id="true" />
@@ -55,18 +50,53 @@ watch(config, (newConfig) => {
 
 <style scoped>
 .condition-node {
-  @apply bg-white border-2 border-purple-400 rounded-xl p-3 min-w-[180px];
+  background: var(--light-surface);
+  border: 2px solid var(--secondary-color);
+  border-radius: var(--radius-lg);
+  padding: 12px;
+  min-width: 180px;
 }
 
 .node-header {
-  @apply flex items-center gap-2 mb-2 pb-2 border-b border-purple-100;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(99, 102, 241, 0.2);
 }
 
 .node-body {
-  @apply space-y-2;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .handle {
-  @apply w-3 h-3 bg-purple-500 border-2 border-white rounded-full;
+  width: 12px;
+  height: 12px;
+  background: var(--secondary-color);
+  border: 2px solid var(--light-surface);
+  border-radius: 50%;
+}
+
+.text-purple-500 {
+  color: var(--secondary-color);
+}
+
+.font-medium {
+  font-weight: 500;
+}
+
+.text-sm {
+  font-size: 14px;
+}
+
+.space-y-2 > * + * {
+  margin-top: 8px;
+}
+
+.w-full {
+  width: 100%;
 }
 </style>

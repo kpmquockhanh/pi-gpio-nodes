@@ -7,23 +7,23 @@
     <div class="node-body">
       <div class="text-xs text-gray-500 mb-2">{{ data.subtype || 'pin_state' }}</div>
       <div class="space-y-2">
-        <select v-model="config.node" class="w-full text-xs p-1 border rounded">
-          <option value="">Select node</option>
-          <option value="local">Local</option>
-        </select>
-        <select v-model="config.pin" class="w-full text-xs p-1 border rounded">
-          <option value="">Select pin</option>
-          <option value="pc-power">PC Power</option>
-          <option value="status-led">Status LED</option>
-          <option value="power-button">Power Button</option>
-        </select>
-        <select v-model="config.condition" class="w-full text-xs p-1 border rounded">
-          <option value="HIGH">HIGH</option>
-          <option value="LOW">LOW</option>
-          <option value="rising_edge">Rising Edge</option>
-          <option value="falling_edge">Falling Edge</option>
-          <option value="change">Any Change</option>
-        </select>
+        <a-select v-model:value="config.node" size="small" class="w-full">
+          <a-select-option value="">Select node</a-select-option>
+          <a-select-option value="local">Local</a-select-option>
+        </a-select>
+        <a-select v-model:value="config.pin" size="small" class="w-full">
+          <a-select-option value="">Select pin</a-select-option>
+          <a-select-option value="pc-power">PC Power</a-select-option>
+          <a-select-option value="status-led">Status LED</a-select-option>
+          <a-select-option value="power-button">Power Button</a-select-option>
+        </a-select>
+        <a-select v-model:value="config.condition" size="small" class="w-full">
+          <a-select-option value="HIGH">HIGH</a-select-option>
+          <a-select-option value="LOW">LOW</a-select-option>
+          <a-select-option value="rising_edge">Rising Edge</a-select-option>
+          <a-select-option value="falling_edge">Falling Edge</a-select-option>
+          <a-select-option value="change">Any Change</a-select-option>
+        </a-select>
       </div>
     </div>
     <Handle type="source" position="bottom" class="handle" />
@@ -48,18 +48,65 @@ watch(config, (newConfig) => {
 
 <style scoped>
 .trigger-node {
-  @apply bg-white border-2 border-blue-400 rounded-xl p-3 min-w-[180px];
+  background: var(--light-surface);
+  border: 2px solid var(--primary-color);
+  border-radius: var(--radius-lg);
+  padding: 12px;
+  min-width: 180px;
 }
 
 .node-header {
-  @apply flex items-center gap-2 mb-2 pb-2 border-b border-blue-100;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(13, 148, 136, 0.2);
 }
 
 .node-body {
-  @apply space-y-2;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .handle {
-  @apply w-3 h-3 bg-blue-500 border-2 border-white rounded-full;
+  width: 12px;
+  height: 12px;
+  background: var(--primary-color);
+  border: 2px solid var(--light-surface);
+  border-radius: 50%;
+}
+
+.text-blue-500 {
+  color: var(--primary-color);
+}
+
+.font-medium {
+  font-weight: 500;
+}
+
+.text-sm {
+  font-size: 14px;
+}
+
+.text-xs {
+  font-size: 12px;
+}
+
+.text-gray-500 {
+  color: var(--light-text-muted);
+}
+
+.mb-2 {
+  margin-bottom: 8px;
+}
+
+.space-y-2 > * + * {
+  margin-top: 8px;
+}
+
+.w-full {
+  width: 100%;
 }
 </style>

@@ -1,39 +1,151 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-@layer base {
-  body {
-    @apply bg-gray-50 text-gray-900;
-  }
+/* Ant Design Vue custom theme - Teal/Indigo Palette (Light Mode) */
+:root {
+  /* Primary Palette - Teal */
+  --primary-color: #0d9488;
+  --primary-hover: #0f766e;
+  --primary-active: #115e59;
+  --primary-light: #ccfbf1;
   
-  .dark body {
-    @apply bg-dark-bg text-dark-text;
-  }
+  /* Secondary - Indigo */
+  --secondary-color: #6366f1;
+  --secondary-hover: #4f46e5;
+  --secondary-light: #e0e7ff;
+  
+  /* Semantic Colors */
+  --success-color: #10b981;
+  --warning-color: #f59e0b;
+  --error-color: #ef4444;
+  --info-color: #06b6d4;
+  
+  /* Light Theme Backgrounds (Default) */
+  --light-bg: #f8fafc;
+  --light-surface: #ffffff;
+  --light-border: #e2e8f0;
+  --light-text: #0f172a;
+  --light-text-muted: #64748b;
+  
+  /* Dark Theme Backgrounds (Kept for reference) */
+  --dark-bg: #0f172a;
+  --dark-surface: #1e293b;
+  --dark-surface-elevated: #334155;
+  --dark-border: #475569;
+  --dark-text: #f8fafc;
+  --dark-text-muted: #94a3b8;
+  
+  /* Spacing */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  
+  /* Border Radius */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  
+  /* Shadows */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
 }
 
-@layer components {
-  .btn {
-    @apply px-4 py-2 rounded-lg font-medium transition-all duration-200;
-  }
-  
-  .btn-primary {
-    @apply bg-blue-600 text-white hover:bg-blue-700;
-  }
-  
-  .btn-secondary {
-    @apply bg-gray-200 text-gray-700 hover:bg-gray-300;
-  }
-  
-  .dark .btn-secondary {
-    @apply bg-dark-surface text-dark-text border border-dark-border;
-  }
-  
-  .card {
-    @apply bg-white rounded-xl border border-gray-200 shadow-sm;
-  }
-  
-  .dark .card {
-    @apply bg-dark-surface border-dark-border;
-  }
+/* Base styles - Light Mode */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  background-color: var(--light-bg);
+  color: var(--light-text);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Scrollbar styling - Light */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--light-border);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--light-text-muted);
+}
+
+/* Animation keyframes */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Utility classes (minimal, no Tailwind) */
+.flex {
+  display: flex;
+}
+
+.items-center {
+  align-items: center;
+}
+
+.justify-center {
+  justify-content: center;
+}
+
+.gap-2 {
+  gap: 8px;
+}
+
+.gap-3 {
+  gap: 12px;
+}
+
+.gap-4 {
+  gap: 16px;
+}
+
+.text-center {
+  text-align: center;
+}
+
+/* Fix Lucide icon alignment in Ant Design Vue buttons */
+.ant-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ant-btn svg {
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+/* Ensure icon-only buttons are still centered */
+.ant-btn-icon-only {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
 }
