@@ -14,32 +14,33 @@ services:
       - go-mod-cache:/go/pkg/mod
     environment:
       - CONFIG_PATH=/app/dev-config.toml
+      - DEV_MODE=true
       # - MOCK_GPIO=true
       - GIN_MODE=debug
     networks:
       - pi-gpio-network
     restart: unless-stopped
 
-  # Agent Node (for testing multi-node setup)
-  agent:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile.dev
-    container_name: pi-gpio-agent
-    ports:
-      - "9090:9090"
-    volumes:
-      - ./backend:/app
-      - go-mod-cache:/go/pkg/mod
-    environment:
-      - CONFIG_PATH=/app/agent-config.toml
-      # - MOCK_GPIO=true
-      - GIN_MODE=debug
-    networks:
-      - pi-gpio-network
-    depends_on:
-      - backend
-    restart: unless-stopped
+  # # Agent Node (for testing multi-node setup)
+  # agent:
+  #   build:
+  #     context: ./backend
+  #     dockerfile: Dockerfile.dev
+  #   container_name: pi-gpio-agent
+  #   ports:
+  #     - "9090:9090"
+  #   volumes:
+  #     - ./backend:/app
+  #     - go-mod-cache:/go/pkg/mod
+  #   environment:
+  #     - CONFIG_PATH=/app/agent-config.toml
+  #     # - MOCK_GPIO=true
+  #     - GIN_MODE=debug
+  #   networks:
+  #     - pi-gpio-network
+  #   depends_on:
+  #     - backend
+  #   restart: unless-stopped
 
   # Vue Frontend
   frontend:
@@ -52,8 +53,8 @@ services:
     volumes:
       # Mount source code for hot reload
       - ./frontend:/app
-      # Named volume for node_modules (don't overwrite with host)
-      - node-modules-cache:/app/node_modules
+      # Use a Docker-only node_modules so it never touches the host's
+      - frontend-node-modules:/app/node_modules
     environment:
       - NODE_ENV=development
     depends_on:
@@ -68,4 +69,4 @@ networks:
 
 volumes:
   go-mod-cache:
-  node-modules-cache:
+  frontend-node-modules:

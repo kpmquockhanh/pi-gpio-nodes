@@ -30,12 +30,22 @@
       </a-button>
       <a-button
         v-if="canPulse"
+        type="primary"
+        class="btn-warning"
+        @click="executePulseDirect"
+        :loading="isExecuting"
+        size="small">
+        <Zap :size="14" />
+        Press
+      </a-button>
+      <a-button
+        v-if="canPulse"
         type="default"
         @click="showPulse = true"
         :loading="isExecuting"
         size="small">
-        <Zap :size="14" />
-        Pulse
+        <Settings :size="14" />
+        Custom
       </a-button>
       <a-button
         v-if="canSet"
@@ -151,6 +161,7 @@ import {
   Activity,
   Clock,
   CircleDot,
+  Settings,
 } from '@lucide/vue'
 
 const props = defineProps({
@@ -199,7 +210,7 @@ const stateIcon = computed(() => {
 const canToggle = computed(() => props.pin.mode === 'output' && props.pin.type !== 'relay')
 const canPulse = computed(() => props.pin.mode === 'output' && props.pin.type === 'relay')
 const canSet = computed(() => props.pin.mode === 'output')
-const canBlink = computed(() => props.pin.mode === 'output')
+const canBlink = computed(() => props.pin.mode === 'output' && props.pin.type === 'led')
 const canRead = computed(() => props.pin.mode === 'input')
 
 const timeAgo = computed(() => {
@@ -232,6 +243,11 @@ async function execute(action, params = {}) {
 function executePulse() {
   execute('pulse', { duration_ms: pulseDuration.value })
   showPulse.value = false
+}
+
+function executePulseDirect() {
+  const defaultMs = props.pin.actions?.pulse?.default_ms || 500
+  execute('pulse', { duration_ms: defaultMs })
 }
 
 function executeBlink() {

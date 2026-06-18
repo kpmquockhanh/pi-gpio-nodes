@@ -6,7 +6,7 @@ role = "agent"
 [network]
 listen_port = 9090
 master_node = "backend"  # Docker service name resolves to master
-tailscale_ip = "agent"  # Docker service name so master can reach agent
+ip = "agent"  # IP or hostname so master can reach agent
 
 [security]
 api_key = "dev-secret-key"  # Must match master API key

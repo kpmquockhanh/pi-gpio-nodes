@@ -32,11 +32,11 @@ func (p *AgentPool) LoadAgentsFromConfig() {
 }
 
 // AddAgent adds an agent to the pool
-func (p *AgentPool) AddAgent(nodeID, nodeName, tailscaleIP, apiKey string, port int) *AgentClient {
+func (p *AgentPool) AddAgent(nodeID, nodeName, ip, apiKey string, port int) *AgentClient {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
-	client := NewAgentClient(nodeID, nodeName, tailscaleIP, apiKey, port)
+	client := NewAgentClient(nodeID, nodeName, ip, apiKey, port)
 	p.agents[nodeID] = client
 	
 	// Try to connect

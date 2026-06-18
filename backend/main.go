@@ -101,6 +101,16 @@ func runMaster(cfg *config.Config, manager *node.Manager, g gpio.GPIO) {
 	hub := api.NewWebSocketHub()
 	go hub.Run()
 
+	// Wire up manager state changes to WebSocket broadcasts
+	manager.SetBroadcaster(func(nodeID, pinID string, state interface{}) {
+		hub.Broadcast(api.StateUpdateMessage{
+			Type:  "state_update",
+			Node:  nodeID,
+			Pin:   pinID,
+			State: state,
+		})
+	})
+
 	// Create agent pool
 	agentPool := master.NewAgentPool(cfg)
 
@@ -131,12 +141,12 @@ func runMaster(cfg *config.Config, manager *node.Manager, g gpio.GPIO) {
 	if port == 0 {
 		port = 8080
 	}
-	server := api.NewServer(port, staticFS)
+	devMode := os.Getenv("DEV_MODE") == "true"
+	server := api.NewServer(port, staticFS, devMode)
 	router := server.Router()
 
 	// Add middleware
 	router.Use(api.CORSMiddleware())
-	router.Use(api.LoggerMiddleware())
 	if cfg.Security.APIKey != "" {
 		router.Use(api.APIKeyMiddleware(cfg.Security.APIKey))
 	}

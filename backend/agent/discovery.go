@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"time"
@@ -44,7 +45,7 @@ func NewDiscovery(cfg *config.Config) *Discovery {
 type AgentInfo struct {
 	NodeID      string `json:"node_id"`
 	NodeName    string `json:"node_name"`
-	TailscaleIP string `json:"tailscale_ip"`
+	IP string `json:"ip"`
 	Port        int    `json:"port"`
 	APIKey      string `json:"api_key"`
 }
@@ -55,7 +56,7 @@ func (d *Discovery) RegisterWithMaster() error {
 	info := AgentInfo{
 		NodeID:      d.cfg.Node.ID,
 		NodeName:    d.cfg.Node.Name,
-		TailscaleIP: d.cfg.Network.TailscaleIP,
+		IP: d.cfg.Network.IP,
 		Port:        d.cfg.Network.ListenPort,
 		APIKey:      d.cfg.Security.APIKey,
 	}
@@ -80,7 +81,14 @@ func (d *Discovery) RegisterWithMaster() error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
-		return fmt.Errorf("master rejected registration: %d", resp.StatusCode)
+		body, _ := io.ReadAll(resp.Body)
+		var errResp struct {
+			Error string `json:"error"`
+		}
+		if err := json.Unmarshal(body, &errResp); err == nil && errResp.Error != "" {
+			return fmt.Errorf("master rejected registration (%d): %s", resp.StatusCode, errResp.Error)
+		}
+		return fmt.Errorf("master rejected registration: %d - %s", resp.StatusCode, string(body))
 	}
 
 	log.Printf("Successfully registered with master at %s", d.masterURL)
@@ -172,7 +180,7 @@ func (d *Discovery) sendHeartbeat() error {
 	info := AgentInfo{
 		NodeID:      d.cfg.Node.ID,
 		NodeName:    d.cfg.Node.Name,
-		TailscaleIP: d.cfg.Network.TailscaleIP,
+		IP: d.cfg.Network.IP,
 		Port:        d.cfg.Network.ListenPort,
 		APIKey:      d.cfg.Security.APIKey,
 	}

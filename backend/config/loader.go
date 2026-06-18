@@ -26,7 +26,7 @@ type NodeConfig struct {
 // NetworkConfig defines network settings
 type NetworkConfig struct {
 	ListenPort  int    `toml:"listen_port"`
-	TailscaleIP string `toml:"tailscale_ip"`
+	IP string `toml:"ip"`
 	MasterNode  string `toml:"master_node"` // Agents only
 }
 
@@ -132,6 +132,9 @@ func (c *Config) Validate() error {
 	}
 	if c.Node.Role == "agent" && c.Network.MasterNode == "" {
 		return fmt.Errorf("network.master_node is required for agent nodes")
+	}
+	if c.Node.Role == "agent" && c.Network.IP == "" {
+		return fmt.Errorf("network.ip is required for agent nodes")
 	}
 
 	// Validate pins

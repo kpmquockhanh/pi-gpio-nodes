@@ -6,7 +6,7 @@ export const useLogsStore = defineStore('logs', {
     logs: [],
     loading: false,
     error: null,
-    autoRefresh: true,
+    autoRefresh: false,
     refreshInterval: 5000,
   }),
 

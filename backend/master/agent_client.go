@@ -34,7 +34,7 @@ type AgentHealth struct {
 type AgentClient struct {
 	nodeID      string
 	nodeName    string
-	tailscaleIP string
+	ip string
 	port        int
 	apiKey      string
 	conn        *websocket.Conn
@@ -49,21 +49,21 @@ type AgentClient struct {
 }
 
 // NewAgentClient creates a new agent client
-func NewAgentClient(nodeID, nodeName, tailscaleIP, apiKey string, port int) *AgentClient {
+func NewAgentClient(nodeID, nodeName, ip, apiKey string, port int) *AgentClient {
 	return &AgentClient{
-		nodeID:      nodeID,
-		nodeName:    nodeName,
-		tailscaleIP: tailscaleIP,
-		port:        port,
-		apiKey:      apiKey,
-		state:       make(map[string]interface{}),
-		handlers:    make([]func(string, map[string]interface{}), 0),
+		nodeID:   nodeID,
+		nodeName: nodeName,
+		ip:       ip,
+		port:     port,
+		apiKey:   apiKey,
+		state:    make(map[string]interface{}),
+		handlers: make([]func(string, map[string]interface{}), 0),
 	}
 }
 
 // Connect establishes WebSocket connection to agent
 func (c *AgentClient) Connect() error {
-	wsURL := fmt.Sprintf("ws://%s:%d/ws?api_key=%s", c.tailscaleIP, c.port, c.apiKey)
+	wsURL := fmt.Sprintf("ws://%s:%d/ws?api_key=%s", c.ip, c.port, c.apiKey)
 
 	conn, _, err := websocket.DefaultDialer.Dial(wsURL, nil)
 	if err != nil {
@@ -79,6 +79,20 @@ func (c *AgentClient) Connect() error {
 	c.mu.Unlock()
 
 	log.Printf("Connected to agent: %s (%s)", c.nodeName, c.nodeID)
+
+	// Proactively fetch pins via HTTP so we have state even before WS messages arrive
+	if pinsResult, err := c.GetPins(); err == nil {
+		if pinsData, ok := pinsResult["pins"]; ok {
+			if pinsMap, ok := pinsData.(map[string]interface{}); ok {
+				c.mu.Lock()
+				c.state["pins"] = pinsMap
+				c.mu.Unlock()
+				log.Printf("Fetched %d pins from agent %s via HTTP", len(pinsMap), c.nodeID)
+			}
+		}
+	} else {
+		log.Printf("Failed to fetch pins from agent %s via HTTP: %v", c.nodeID, err)
+	}
 
 	// Start message handler
 	go c.readLoop()
@@ -110,7 +124,7 @@ func (c *AgentClient) GetNodeInfo() map[string]interface{} {
 	return map[string]interface{}{
 		"id":            c.nodeID,
 		"name":          c.nodeName,
-		"tailscale_ip":  c.tailscaleIP,
+		"ip":            c.ip,
 		"port":          c.port,
 		"connected":     c.IsConnected(),
 		"last_seen":     c.lastSeen,
@@ -198,11 +212,20 @@ func (c *AgentClient) readLoop() {
 		case "state_full":
 			if state, ok := data["state"].(map[string]interface{}); ok {
 				c.state = state
+				log.Printf("Received state_full from agent %s with %d top-level keys", c.nodeID, len(state))
+				if pins, ok := state["pins"]; ok {
+					if pinsMap, ok := pins.(map[string]interface{}); ok {
+						log.Printf("Agent %s has %d pins in state_full", c.nodeID, len(pinsMap))
+					}
+				}
+			} else {
+				log.Printf("Received state_full from agent %s but state was not a map", c.nodeID)
 			}
 		case "state_update":
 			pinID, _ := data["pin"].(string)
 			state, _ := data["state"]
 			c.state[pinID] = state
+			log.Printf("Received state_update from agent %s for pin %s", c.nodeID, pinID)
 		}
 
 		// Notify handlers
@@ -250,7 +273,7 @@ func (c *AgentClient) GetHealth() AgentHealth {
 // CheckHealth performs an active health check
 func (c *AgentClient) CheckHealth() error {
 	start := time.Now()
-	url := fmt.Sprintf("http://%s:%d/api/health", c.tailscaleIP, c.port)
+	url := fmt.Sprintf("http://%s:%d/api/health", c.ip, c.port)
 	resp, err := http.Get(url)
 	if err != nil {
 		c.mu.Lock()
@@ -285,7 +308,7 @@ func (c *AgentClient) CheckHealth() error {
 
 // GetPins fetches pin states from agent via HTTP
 func (c *AgentClient) GetPins() (map[string]interface{}, error) {
-	url := fmt.Sprintf("http://%s:%d/api/pins", c.tailscaleIP, c.port)
+	url := fmt.Sprintf("http://%s:%d/api/pins", c.ip, c.port)
 	resp, err := http.Get(url)
 	if err != nil {
 		return nil, err

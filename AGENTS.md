@@ -75,6 +75,7 @@ role = "agent"
 [network]
 listen_port = 9090
 master_node = "master-pi"  # Must match master node ID
+ip = "192.168.1.50"        # IP or hostname where master can reach this agent
 
 [security]
 api_key = "your-secret-key"  # Must match master API key
@@ -188,7 +189,7 @@ For multiple Raspberry Pis on different networks:
 [network]
 listen_port = 8080
 master_node = "master-pi"
-tailscale_ip = "100.x.x.x"  # Optional, for reference
+ip = "100.x.x.x"  # IP or hostname where master can reach this agent
 ```
 
 ## UI Theme

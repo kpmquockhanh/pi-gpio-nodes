@@ -11,38 +11,62 @@ import (
 
 // PinState represents the current state of a pin
 type PinState struct {
-	ID        string      `json:"id"`
-	Name      string      `json:"name"`
-	BCM       int         `json:"bcm"`
-	Type      string      `json:"type"`
-	Mode      string      `json:"mode"`
-	State     interface{} `json:"state"` // bool for digital, float64 for analog
-	LastUpdate time.Time  `json:"last_update"`
+	ID         string                 `json:"id"`
+	Name       string                 `json:"name"`
+	BCM        int                    `json:"bcm"`
+	Type       string                 `json:"type"`
+	Mode       string                 `json:"mode"`
+	State      interface{}            `json:"state"` // bool for digital, float64 for analog
+	LastUpdate time.Time              `json:"last_update"`
+	Actions    map[string]interface{} `json:"actions,omitempty"`
+}
+
+// copyPinState creates a deep copy of a PinState
+func copyPinState(s *PinState) *PinState {
+	actionsCopy := make(map[string]interface{})
+	for k, v := range s.Actions {
+		actionsCopy[k] = v
+	}
+	return &PinState{
+		ID:         s.ID,
+		Name:       s.Name,
+		BCM:        s.BCM,
+		Type:       s.Type,
+		Mode:       s.Mode,
+		State:      s.State,
+		LastUpdate: s.LastUpdate,
+		Actions:    actionsCopy,
+	}
 }
 
 // NodeState represents the full state of a node
 type NodeState struct {
-	ID     string              `json:"id"`
-	Name   string              `json:"name"`
-	Role   string              `json:"role"`
-	Status string              `json:"status"`
-	Pins   map[string]*PinState `json:"pins"`
+	ID       string              `json:"id"`
+	Name     string              `json:"name"`
+	Role     string              `json:"role"`
+	Status   string              `json:"status"`
+	MockGPIO bool                `json:"mock_gpio"`
+	Pins     map[string]*PinState `json:"pins"`
 }
 
 // Manager manages local GPIO pins and their state
 type Manager struct {
-	mu      sync.RWMutex
-	config  *config.Config
-	gpio    gpio.GPIO
-	pins    map[string]*PinState
-	handlers map[string]func(string, interface{})
+	mu          sync.RWMutex
+	config      *config.Config
+	gpio        gpio.GPIO
+	mockGPIO    bool
+	pins        map[string]*PinState
+	handlers    map[string]func(string, interface{})
+	broadcaster func(nodeID, pinID string, state interface{})
 }
 
 // NewManager creates a new node manager
 func NewManager(cfg *config.Config, g gpio.GPIO) *Manager {
+	_, isMock := g.(*gpio.MockGPIO)
 	return &Manager{
 		config:   cfg,
 		gpio:     g,
+		mockGPIO: isMock,
 		pins:     make(map[string]*PinState),
 		handlers: make(map[string]func(string, interface{})),
 	}
@@ -58,14 +82,37 @@ func (m *Manager) Initialize() error {
 			return fmt.Errorf("failed to init pin %s (BCM %d): %w", pinCfg.ID, pinCfg.BCM, err)
 		}
 
+		// Convert actions config to plain map for JSON
+		actions := make(map[string]interface{})
+		for k, v := range pinCfg.Actions {
+			action := make(map[string]interface{})
+			if v.DefaultMs != nil {
+				action["default_ms"] = *v.DefaultMs
+			}
+			if v.MaxMs != nil {
+				action["max_ms"] = *v.MaxMs
+			}
+			if v.MaxTimes != nil {
+				action["max_times"] = *v.MaxTimes
+			}
+			if v.DefaultTimes != nil {
+				action["default_times"] = *v.DefaultTimes
+			}
+			if v.IntervalMs != nil {
+				action["interval_ms"] = *v.IntervalMs
+			}
+			actions[k] = action
+		}
+
 		state := &PinState{
-			ID:     pinCfg.ID,
-			Name:   pinCfg.Name,
-			BCM:    pinCfg.BCM,
-			Type:   pinCfg.Type,
-			Mode:   pinCfg.Mode,
-			State:  false, // default LOW
+			ID:         pinCfg.ID,
+			Name:       pinCfg.Name,
+			BCM:        pinCfg.BCM,
+			Type:       pinCfg.Type,
+			Mode:       pinCfg.Mode,
+			State:      false, // default LOW
 			LastUpdate: time.Now(),
+			Actions:    actions,
 		}
 
 		// Set default state for outputs
@@ -93,33 +140,37 @@ func (m *Manager) Initialize() error {
 // GetState returns the current state of a pin
 func (m *Manager) GetState(pinID string) (*PinState, error) {
 	m.mu.RLock()
-	defer m.mu.RUnlock()
-
 	state, ok := m.pins[pinID]
 	if !ok {
+		m.mu.RUnlock()
 		return nil, fmt.Errorf("pin %s not found", pinID)
 	}
+	m.mu.RUnlock()
 
-	// Refresh state from GPIO
+	// Refresh state from GPIO (outside lock to avoid blocking)
 	pinCfg := m.config.GetPinConfig(pinID)
 	if pinCfg != nil {
 		if val, err := m.gpio.Get(uint8(pinCfg.BCM)); err == nil {
+			m.mu.Lock()
 			state.State = val
 			state.LastUpdate = time.Now()
+			m.mu.Unlock()
 		}
 	}
 
-	return state, nil
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return copyPinState(state), nil
 }
 
-// GetAllStates returns all pin states
+// GetAllStates returns all pin states (deep copy)
 func (m *Manager) GetAllStates() map[string]*PinState {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	result := make(map[string]*PinState)
+	result := make(map[string]*PinState, len(m.pins))
 	for id, state := range m.pins {
-		result[id] = state
+		result[id] = copyPinState(state)
 	}
 	return result
 }
@@ -181,13 +232,15 @@ func (m *Manager) ExecuteAction(pinID string, action string, params map[string]i
 		err = m.gpio.Set(uint8(pinCfg.BCM), true)
 		if err == nil {
 			state.State = true
-			go func() {
-				time.Sleep(time.Duration(durationMs) * time.Millisecond)
-				m.gpio.Set(uint8(pinCfg.BCM), false)
-				state.State = false
-				state.LastUpdate = time.Now()
+			go func(pin uint8, dur int, st *PinState) {
+				time.Sleep(time.Duration(dur) * time.Millisecond)
+				m.gpio.Set(pin, false)
+				m.mu.Lock()
+				st.State = false
+				st.LastUpdate = time.Now()
+				m.mu.Unlock()
 				m.notifyHandlers(pinID, false)
-			}()
+			}(uint8(pinCfg.BCM), int(durationMs), state)
 			result = true
 		}
 
@@ -201,19 +254,25 @@ func (m *Manager) ExecuteAction(pinID string, action string, params map[string]i
 			intervalMs = float64(*pinCfg.Actions["blink"].IntervalMs)
 		}
 
-		go func() {
-			for i := 0; i < int(times); i++ {
-				m.gpio.Set(uint8(pinCfg.BCM), true)
-				state.State = true
+		go func(pin uint8, blinkTimes int, blinkInterval int, st *PinState) {
+			for i := 0; i < blinkTimes; i++ {
+				m.gpio.Set(pin, true)
+				m.mu.Lock()
+				st.State = true
+				m.mu.Unlock()
 				m.notifyHandlers(pinID, true)
-				time.Sleep(time.Duration(intervalMs) * time.Millisecond)
-				m.gpio.Set(uint8(pinCfg.BCM), false)
-				state.State = false
+				time.Sleep(time.Duration(blinkInterval) * time.Millisecond)
+				m.gpio.Set(pin, false)
+				m.mu.Lock()
+				st.State = false
+				m.mu.Unlock()
 				m.notifyHandlers(pinID, false)
-				time.Sleep(time.Duration(intervalMs) * time.Millisecond)
+				time.Sleep(time.Duration(blinkInterval) * time.Millisecond)
 			}
-			state.LastUpdate = time.Now()
-		}()
+			m.mu.Lock()
+			st.LastUpdate = time.Now()
+			m.mu.Unlock()
+		}(uint8(pinCfg.BCM), int(times), int(intervalMs), state)
 		result = int(times)
 
 	case "read":
@@ -243,23 +302,43 @@ func (m *Manager) OnStateChange(pinID string, handler func(string, interface{}))
 	m.handlers[pinID] = handler
 }
 
+// SetBroadcaster sets a callback that is invoked on every state change
+func (m *Manager) SetBroadcaster(b func(nodeID, pinID string, state interface{})) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.broadcaster = b
+}
+
 func (m *Manager) notifyHandlers(pinID string, state interface{}) {
-	if handler, ok := m.handlers[pinID]; ok {
+	m.mu.RLock()
+	handler, ok := m.handlers[pinID]
+	broadcaster := m.broadcaster
+	m.mu.RUnlock()
+	if ok {
 		go handler(pinID, state)
+	}
+	if broadcaster != nil {
+		go broadcaster(m.config.Node.ID, pinID, state)
 	}
 }
 
-// GetNodeState returns the full node state
+// GetNodeState returns the full node state (deep copy of pins)
 func (m *Manager) GetNodeState() *NodeState {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
+	pinsCopy := make(map[string]*PinState, len(m.pins))
+	for id, state := range m.pins {
+		pinsCopy[id] = copyPinState(state)
+	}
+
 	return &NodeState{
-		ID:     m.config.Node.ID,
-		Name:   m.config.Node.Name,
-		Role:   m.config.Node.Role,
-		Status: "online",
-		Pins:   m.pins,
+		ID:       m.config.Node.ID,
+		Name:     m.config.Node.Name,
+		Role:     m.config.Node.Role,
+		Status:   "online",
+		MockGPIO: m.mockGPIO,
+		Pins:     pinsCopy,
 	}
 }
 

@@ -78,7 +78,9 @@ const logsStore = useLogsStore()
 
 onMounted(() => {
   logsStore.fetchLogs(50)
-  logsStore.startAutoRefresh()
+  if (logsStore.autoRefresh) {
+    logsStore.startAutoRefresh()
+  }
 })
 
 onBeforeUnmount(() => {

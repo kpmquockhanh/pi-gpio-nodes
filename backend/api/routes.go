@@ -110,8 +110,13 @@ func (h *Handler) GetNodes(c *gin.Context) {
 					}
 					return "offline"
 				}(),
-				"tailscale_ip": info["tailscale_ip"],
+				"ip":           info["ip"],
 				"pins":         pins,
+			}
+
+			// Pass through mock_gpio flag from agent state if available
+			if mockGPIO, ok := state["mock_gpio"]; ok {
+				agentNode["mock_gpio"] = mockGPIO
 			}
 			nodes = append(nodes, agentNode)
 		}
@@ -234,14 +239,6 @@ func (h *Handler) ExecuteAction(c *gin.Context) {
 	resultStr, _ := json.Marshal(result)
 	h.db.LogAction(nodeID, pinID, req.Action, string(paramsJSON), string(resultStr), "user")
 	h.db.TrimActionLogs(1000)
-
-	// Broadcast state change
-	h.hub.Broadcast(StateUpdateMessage{
-		Type:   "state_update",
-		Node:   nodeID,
-		Pin:    pinID,
-		State:  newState,
-	})
 
 	c.JSON(http.StatusOK, gin.H{
 		"success":    true,
@@ -498,11 +495,11 @@ func (h *Handler) GetLogs(c *gin.Context) {
 
 // AgentRegistration represents an agent registration request
 type AgentRegistration struct {
-	NodeID      string `json:"node_id" binding:"required"`
-	NodeName    string `json:"node_name" binding:"required"`
-	TailscaleIP string `json:"tailscale_ip" binding:"required"`
-	Port        int    `json:"port" binding:"required"`
-	APIKey      string `json:"api_key" binding:"required"`
+	NodeID   string `json:"node_id" binding:"required"`
+	NodeName string `json:"node_name" binding:"required"`
+	IP       string `json:"ip" binding:"required"`
+	Port     int    `json:"port" binding:"required"`
+	APIKey   string `json:"api_key" binding:"required"`
 }
 
 // RegisterAgent handles agent registration
@@ -520,7 +517,7 @@ func (h *Handler) RegisterAgent(c *gin.Context) {
 	}
 
 	// Add agent to pool
-	agent := h.agentPool.AddAgent(req.NodeID, req.NodeName, req.TailscaleIP, req.APIKey, req.Port)
+	agent := h.agentPool.AddAgent(req.NodeID, req.NodeName, req.IP, req.APIKey, req.Port)
 	
 	// Set up state change forwarding
 	h.agentPool.OnAgentStateChange(func(nodeID string, data map[string]interface{}) {
@@ -569,7 +566,7 @@ func (h *Handler) AgentHeartbeat(c *gin.Context) {
 	agent, ok := h.agentPool.GetAgent(nodeID)
 	if !ok {
 		// Agent not found, auto-register it
-		agent = h.agentPool.AddAgent(req.NodeID, req.NodeName, req.TailscaleIP, req.APIKey, req.Port)
+		agent = h.agentPool.AddAgent(req.NodeID, req.NodeName, req.IP, req.APIKey, req.Port)
 	}
 
 	// Update last seen

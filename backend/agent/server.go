@@ -30,6 +30,7 @@ type AgentServer struct {
 func NewAgentServer(cfg *config.Config, manager *node.Manager) *AgentServer {
 	gin.SetMode(gin.ReleaseMode)
 	router := gin.New()
+	router.SetTrustedProxies(nil)
 	router.Use(gin.Recovery())
 
 	return &AgentServer{
@@ -116,6 +117,7 @@ type MasterCommand struct {
 func (a *AgentServer) handleMasterCommand(cmd MasterCommand) interface{} {
 	switch cmd.Type {
 	case "action":
+		log.Printf("Received action from master: pin=%s action=%s params=%v", cmd.PinID, cmd.Action, cmd.Params)
 		result, err := a.manager.ExecuteAction(cmd.PinID, cmd.Action, cmd.Params)
 		if err != nil {
 			log.Printf("Failed to execute command: %v", err)
@@ -263,6 +265,7 @@ func (a *AgentServer) handleWebSocket(c *gin.Context) {
 
 func (a *AgentServer) sendStateToMaster(conn *websocket.Conn, mu *sync.Mutex) {
 	state := a.manager.GetNodeState()
+	log.Printf("Sending state_full to master with %d pins", len(state.Pins))
 	data, _ := json.Marshal(map[string]interface{}{
 		"type":  "state_full",
 		"node":  a.cfg.Node.ID,

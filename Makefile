@@ -1,4 +1,5 @@
 .PHONY: dev frontend build build-pi deploy install clean \
+  up down \
   docker-up docker-down docker-build docker-logs docker-logs-backend docker-logs-frontend docker-logs-agent \
   docker-shell-backend docker-shell-frontend docker-shell-agent docker-clean docker-reset
 
@@ -46,6 +47,10 @@ clean:
 
 # Docker Development Environment
 # ------------------------------
+
+# Short aliases
+up: docker-up
+down: docker-down
 
 # Start Docker dev environment (backend + frontend)
 docker-up:

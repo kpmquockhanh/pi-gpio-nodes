@@ -2,39 +2,35 @@
   <a-config-provider :theme="customTheme">
     <ApiKeySetup v-if="!apiKeyReady" @connected="onApiKeyConnected" />
     <div v-else class="dashboard">
-      <a-page-header
-        class="header"
-        :title="null"
-        :back-icon="false"
-      >
-        <template #extra>
-          <div class="header-content">
-            <div class="header-left">
-              <h1>
-                <LayoutDashboard :size="28" class="header-icon" />
-                Pi GPIO Dashboard
-              </h1>
-              <span class="subtitle">Multi-Node IoT Control</span>
-            </div>
-            <div class="header-right">
-              <a-segmented
-                v-model:value="currentView"
-                :options="[
-                  { label: 'Dashboard', value: 'dashboard' },
-                  { label: 'Automation', value: 'automation' },
-                ]"
-                class="nav-tabs"
-              />
-              <div class="header-actions">
-                <a-tag :color="connectionColor" class="connection-badge">
-                  <component :is="connectionIcon" :size="14" />
-                  {{ connectionText }}
-                </a-tag>
+      <header class="header">
+        <div class="header-content">
+          <div class="header-left">
+            <div class="brand">
+              <LayoutDashboard :size="28" class="header-icon" />
+              <div class="brand-text">
+                <h1>Pi GPIO Dashboard</h1>
+                <span class="subtitle">Multi-Node IoT Control</span>
               </div>
             </div>
           </div>
-        </template>
-      </a-page-header>
+          <div class="header-right">
+            <a-segmented
+              v-model:value="currentView"
+              :options="[
+                { label: 'Dashboard', value: 'dashboard' },
+                { label: 'Automation', value: 'automation' },
+              ]"
+              class="nav-tabs"
+            />
+            <div class="header-actions">
+              <a-tag :color="connectionColor" class="connection-badge">
+                <component :is="connectionIcon" :size="14" />
+                {{ connectionText }}
+              </a-tag>
+            </div>
+          </div>
+        </div>
+      </header>
 
       <main class="main">
         <!-- Dashboard View -->
@@ -68,10 +64,16 @@
                 <template #title>
                   <div class="node-header">
                     <div class="node-info">
-                      <h2>
-                        <Cpu :size="20" />
-                        {{ node.name }}
-                      </h2>
+                      <div class="node-title-row">
+                        <h2>
+                          <Cpu :size="20" />
+                          {{ node.name }}
+                        </h2>
+                        <a-tag v-if="node.mock_gpio" color="warning" class="node-mock-badge">
+                          <FlaskConical :size="12" />
+                          Mock GPIO
+                        </a-tag>
+                      </div>
                       <span class="node-meta">{{ node.id }} • {{ node.role }}</span>
                     </div>
                     <a-tag :color="node.status === 'online' ? 'success' : 'error'" class="node-status">
@@ -81,7 +83,7 @@
                   </div>
                 </template>
                 
-                <div class="pins-grid">
+                <div v-if="Object.keys(node.pins || {}).length > 0" class="pins-grid">
                   <PinCard
                     v-for="pin in Object.values(node.pins || {})"
                     :key="pin.id"
@@ -89,6 +91,13 @@
                     :node-id="node.id"
                     @action="handleAction"
                   />
+                </div>
+                <div v-else class="empty-pins">
+                  <div class="empty-pins-icon">
+                    <Pin :size="32" />
+                  </div>
+                  <p class="empty-pins-text">No pins configured</p>
+                  <p class="empty-pins-subtext">Add pins to this node in the config file to control them here.</p>
                 </div>
               </a-card>
             </div>
@@ -112,7 +121,7 @@
 import { computed, ref, onMounted, onBeforeUnmount } from 'vue'
 import {
   LayoutDashboard, Wifi, WifiOff, Activity,
-  RotateCw, CheckCircle2, XCircle, Cpu
+  RotateCw, CheckCircle2, XCircle, Cpu, FlaskConical, Pin
 } from '@lucide/vue'
 import PinCard from './components/PinCard.vue'
 import LogViewer from './components/LogViewer.vue'
@@ -247,7 +256,7 @@ function retryConnection() {
 
 .header {
   margin-bottom: 24px;
-  padding-bottom: 16px;
+  padding: 20px 0;
   border-bottom: 1px solid var(--light-border);
 }
 
@@ -256,16 +265,26 @@ function retryConnection() {
   justify-content: space-between;
   align-items: center;
   width: 100%;
+  gap: 16px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.brand-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .header-left h1 {
-  font-size: 28px;
+  font-size: 24px;
   font-weight: 700;
   color: var(--light-text);
-  margin-bottom: 4px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
+  line-height: 1.2;
 }
 
 .header-icon {
@@ -276,13 +295,14 @@ function retryConnection() {
 .subtitle {
   font-size: 14px;
   color: var(--light-text-muted);
-  padding-left: 38px;
+  line-height: 1.4;
 }
 
 .header-right {
   display: flex;
   align-items: center;
   gap: 16px;
+  flex-shrink: 0;
 }
 
 .header-actions {
@@ -332,14 +352,21 @@ function retryConnection() {
   width: 100%;
 }
 
+.node-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
 .node-info h2 {
   font-size: 18px;
   font-weight: 600;
   color: var(--light-text);
-  margin-bottom: 4px;
   display: flex;
   align-items: center;
   gap: 8px;
+  margin: 0;
 }
 
 .node-meta {
@@ -357,6 +384,16 @@ function retryConnection() {
   font-size: 12px;
 }
 
+.node-mock-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
 .pins-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
@@ -369,6 +406,39 @@ function retryConnection() {
 
 .error-state {
   padding: 60px 20px;
+}
+
+.empty-pins {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  text-align: center;
+  background: var(--light-bg);
+  border-radius: var(--radius-lg);
+  border: 1px dashed var(--light-border);
+}
+
+.empty-pins-icon {
+  color: var(--light-text-muted);
+  margin-bottom: 12px;
+  opacity: 0.6;
+}
+
+.empty-pins-text {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--light-text-muted);
+  margin: 0 0 4px;
+}
+
+.empty-pins-subtext {
+  font-size: 13px;
+  color: var(--light-text-muted);
+  opacity: 0.8;
+  margin: 0;
+  max-width: 320px;
 }
 
 .sidebar {
@@ -395,19 +465,19 @@ function retryConnection() {
   
   .header-content {
     flex-direction: column;
-    gap: 12px;
+    gap: 16px;
     text-align: center;
   }
-  
+
+  .brand {
+    justify-content: center;
+  }
+
   .header-right {
     flex-direction: column;
     gap: 12px;
   }
-  
-  .subtitle {
-    padding-left: 0;
-  }
-  
+
   .pins-grid {
     grid-template-columns: 1fr;
   }
